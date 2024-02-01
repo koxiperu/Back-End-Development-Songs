@@ -61,6 +61,14 @@ def countsongs():
 
 @app.route("/song", methods=["GET"])
 def songs():
-    ss = db.songs.find({})
-    return {"songs": json_util.dumps(list(ss))}, 200
+    ss = list(db.songs.find({}))
+    return jsonify({"songs": json_util.dumps(ss)}), 200
+
+@app.route("/song/<id>", methods=["GET"])
+def get_song_by_id(id):
+    s = db.songs.find_one({"id": int(id)})
+    if not s:
+        return {"message": f"Song with id {id} not found"}, 404
+    else:
+        return s, 200
 ######################################################################
