@@ -61,14 +61,53 @@ def countsongs():
 
 @app.route("/song", methods=["GET"])
 def songs():
+    sl = []
     ss = list(db.songs.find({}))
-    return jsonify({"songs": json_util.dumps(ss)}), 200
+    for s in ss:
+        ssl = json_util.dumps(s)
+        sl.append(json.loads(ssl))
+    return {"songs": sl}, 200
 
 @app.route("/song/<id>", methods=["GET"])
 def get_song_by_id(id):
-    s = db.songs.find_one({"id": int(id)})
+    s = json_util.dumps(db.songs.find_one({"id": int(id)}))
     if not s:
         return {"message": f"Song with id {id} not found"}, 404
     else:
         return s, 200
+
+@app.route("/song", methods=["POST"])
+def create_song():
+    song_data = request.json
+    song_id = int(song_data["id"])
+    existing_song = db.songs.find_one({"id": song_id})
+    if existing_song:
+        return {"Message": f"song with id {song_id} already exist"}, 302
+    db.songs.insert_one(song_data)
+    inserted_song = db.songs.find_one({"id": song_id})
+    inserted_song_id = json_util.dumps(inserted_song["_id"])
+    return {"inserted ID": json.loads(inserted_song_id)}, 201
+
+@app.route("/song/<int:id>", methods=["PUT"])
+def update_song(id):
+    song_data = request.json
+    song_data["id"] = int(id)
+    existing_song = db.songs.find_one({"id": int(id)})
+    if existing_song:
+        changes = {"$set": song_data}
+        db.songs.update_one(existing_song, changes)
+        updated_song = json_util.dumps(db.songs.find_one({"id": int(id)}))
+        return json.loads(updated_song), 201
+    return {"message": "song not found"}, 404
+
+@app.route("/song/<int:id>", methods=["DELETE"])
+def delete_song(id):
+    song_id = int(id)
+    existing_song = db.songs.find_one({"id": song_id})
+    if existing_song:
+        db.songs.delete_one(existing_song)
+        if db.songs.deleted_count == 0:
+            return {"message": "song not found"}, 404
+        return {"message": "song was deleted successfully"}, 200
+    return {"message": f"Song with id {song_id} doesn't exist"}, 404
 ######################################################################
